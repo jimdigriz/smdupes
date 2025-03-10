@@ -1,0 +1,5 @@
+.*
+!.gitignore
+
+conf.ini
+db.sqlite3
