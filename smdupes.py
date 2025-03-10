@@ -51,7 +51,9 @@ if 'token' not in config:
         'token': token['oauth_token'],
         'token_secret': token['oauth_token_secret']
     }
-    with os.open(CONF, os.O_WRONLY, 0o600) as configfile:
+
+    os.chmod(CONF, 0o400)
+    with open(CONF, 'w') as configfile:
         config.write(configfile)
 
 kwargs['token'] = config['token']['token']
