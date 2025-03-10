@@ -110,13 +110,10 @@ def process_album(album):
         next_page = resJ['Response']['Pages'].get('NextPage')
 
 with ThreadPoolExecutor(max_workers=4) as executor:
-    futures = []
     next_page = res.json()['Response']['User']['Uris']['UserAlbums']['Uri']
     while next_page:
         print(f'processing albums {next_page}')
         res = fetch(next_page)
         resJ = res.json()
-        futures.extend(executor.map(process_album, resJ['Response']['Album']))
+        executor.map(process_album, resJ['Response']['Album'])
         next_page = resJ['Response']['Pages'].get('NextPage')
-    for future in futures:
-        future.result()
