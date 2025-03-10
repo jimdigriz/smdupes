@@ -66,7 +66,7 @@ def fetch(uri, *args, headers=None, **kwargs):
     headers = headers or {}
     headers['accept'] = 'application/json'
     headers['accept-encoding'] = 'gzip'
-    headers['from'] = 'smdupes (https://github.com/jimdigriz/smdupes)'
+    headers['user-agent'] = 'smdupes (https://github.com/jimdigriz/smdupes)'
     return session.get(ORIGIN + uri, *args, auth=auth, headers=headers, **kwargs)
 
 res = fetch('/api/v2!authuser')
