@@ -83,10 +83,13 @@ with sqlite3.connect(DB) as con:
      con.execute('CREATE INDEX image_md5 ON image(md5)')
 
 def process_album(album):
-    con = sqlite3.connect(DB)
-    con.execute('PRAGMA foreign_keys=ON')
-    con.execute("PRAGMA cache_spill=OFF")
-    con.execute('INSERT INTO album VALUES (?, ?, ?, ?)', (album['Uri'], json.dumps(album), album['WebUri'], album['Name']))
+    con = sqlite3.connect(DB, timeout=30)
+    con.execute('INSERT INTO album VALUES (?, ?, ?, ?)', (
+        album['Uri'],
+        json.dumps(album),
+        album['WebUri'],
+        album['Name']
+    ))
 
     next_page = album['Uris']['AlbumImages']['Uri']
     while next_page:

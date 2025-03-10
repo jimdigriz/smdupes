@@ -1,6 +1,6 @@
 Image Deduplicator for [SmugMug](https://smugmug.com/).
 
-I was looking for a tool to deduplicate images on my SmugMug account (~20k images), and I wanted it to work like [`jdupes`](https://www.jdupes.com/) and be fast.
+I was looking for a tool to deduplicate images on my SmugMug account (~45k images), and I wanted it to work like [`jdupes`](https://www.jdupes.com/) and be fast.
 
 **N.B.** this is a Works In Progress...
 
