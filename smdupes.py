@@ -119,8 +119,8 @@ with ThreadPoolExecutor(max_workers=10) as executor:
         print(f'processing albums {next_page}')
         res = fetch(next_page)
         resJ = res.json()
-        futures.extend(executor.map(process_album, resJ['Response']['Album']))
+        for album in resJ['Response']['Album']:
+            futures.append(executor.submit(process_album, album))
         next_page = resJ['Response']['Pages'].get('NextPage')
     for future in futures:
-        if future:
-            future.result()
+        future.result()
