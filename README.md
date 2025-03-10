@@ -39,4 +39,4 @@ To build a list of duplicates run:
 
     ./.venv/bin/python smdupes.py
 
-This builds a `db.sqlite3` file.
+This builds a `db.sqlite3` file, for me this takes roughly one minute for 50,000 images.

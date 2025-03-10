@@ -83,37 +83,42 @@ with sqlite3.connect(DB) as con:
      con.execute('CREATE INDEX image_md5 ON image(md5)')
 
 def process_album(album):
-    con = sqlite3.connect(DB, timeout=30)
-    con.execute('INSERT INTO album VALUES (?, ?, ?, ?)', (
+    con = sqlite3.connect(DB)
+    cur = con.cursor()
+    cur.execute('INSERT INTO album VALUES (?, ?, ?, ?)', (
         album['Uri'],
         json.dumps(album),
         album['WebUri'],
         album['Name']
     ))
+    con.commit()
 
     next_page = album['Uris']['AlbumImages']['Uri']
     while next_page:
         print(f'processing album images {next_page}')
         res = fetch(next_page)
         resJ = res.json()
-        with con:
-            con.executemany('INSERT INTO image VALUES (?, ?, ?, ?, ?, ?)', (
-                (
-                    image['Uri'],
-                    album['Uri'],
-                    json.dumps(image),
-                    image['FileName'],
-                    datetime.fromisoformat(min(image.get('DateTimeOriginal', datetime.max.isoformat()), image['DateTimeUploaded'])),
-                    image['ArchivedMD5']
-                )
-                for image in resJ['Response']['AlbumImage'] ))
+        cur.executemany('INSERT INTO image VALUES (?, ?, ?, ?, ?, ?)', (
+            (
+                image['Uri'],
+                album['Uri'],
+                json.dumps(image),
+                image['FileName'],
+                datetime.fromisoformat(min(image.get('DateTimeOriginal', datetime.max.isoformat()), image['DateTimeUploaded'])),
+                image['ArchivedMD5']
+            ) for image in resJ['Response']['AlbumImage'] ))
+        con.commit()
         next_page = resJ['Response']['Pages'].get('NextPage')
 
-with ThreadPoolExecutor(max_workers=4) as executor:
+with ThreadPoolExecutor(max_workers=10) as executor:
+    futures = []
     next_page = res.json()['Response']['User']['Uris']['UserAlbums']['Uri']
     while next_page:
         print(f'processing albums {next_page}')
         res = fetch(next_page)
         resJ = res.json()
-        executor.map(process_album, resJ['Response']['Album'])
+        futures.extend(executor.map(process_album, resJ['Response']['Album']))
         next_page = resJ['Response']['Pages'].get('NextPage')
+    for future in futures:
+        if future:
+            future.result()
