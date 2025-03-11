@@ -49,10 +49,15 @@ To list the duplicates (keeping the old with the oldest creation timestamp) exec
 
     WITH v AS (
       SELECT
-        *, ROW_NUMBER() OVER (PARTITION BY md5 ORDER BY created ASC) i
+        *,
+        ROW_NUMBER() OVER (PARTITION BY md5 ORDER BY created ASC) i
       FROM image
     )
-    SELECT name, filename, v.uri
+    SELECT
+      name,
+      filename,
+      v.uri
     FROM v
     JOIN album a ON a.uri = v.album
-    WHERE i > 1;
+    WHERE
+      i > 1;
