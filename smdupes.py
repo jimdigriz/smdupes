@@ -7,7 +7,7 @@ import sys
 import sqlite3
 import webbrowser
 
-from authlib.integrations.requests_client import OAuth1Session, OAuth1Auth
+from authlib.integrations.requests_client import OAuth1Auth, OAuth1Session
 import requests
 
 CONF = 'conf.ini'

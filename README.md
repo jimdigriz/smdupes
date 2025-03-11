@@ -40,3 +40,19 @@ To build a list of duplicates run:
     ./.venv/bin/python smdupes.py
 
 This builds a `db.sqlite3` file, for me this takes roughly one minute for 50,000 images.
+
+Once built, open it with:
+
+    sqlite3 db.sqlite3
+
+To list the duplicates (keeping the old with the oldest creation timestamp) execute:
+
+    WITH v AS (
+      SELECT
+        *, ROW_NUMBER() OVER (PARTITION BY md5 ORDER BY created ASC) i
+      FROM image
+    )
+    SELECT name, filename, v.uri
+    FROM v
+    JOIN album a ON a.uri = v.album
+    WHERE i > 1;
