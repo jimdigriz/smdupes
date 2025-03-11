@@ -1,14 +1,14 @@
 from concurrent.futures import ThreadPoolExecutor
+from configparser import ConfigParser
 from datetime import datetime
 import json
 import os
-import requests
 import sys
 import sqlite3
 import webbrowser
 
 from authlib.integrations.requests_client import OAuth1Session, OAuth1Auth
-from configparser import ConfigParser
+import requests
 
 CONF = 'conf.ini'
 DB = 'db.sqlite3'
@@ -28,23 +28,23 @@ except FileNotFoundError:
     print(f"'{CONF}' not found", file=sys.stderr)
     sys.exit(1)
 
-kwargs = {
+authargs = {
     'client_id': config['client']['client_id'],
     'client_secret': config['client']['client_secret'],
     'redirect_uri': 'oob'
 }
 
 if 'token' not in config:
-    client = OAuth1Session(**kwargs)
+    client = OAuth1Session(**authargs)
 
     request_token = client.fetch_request_token(REQUEST_TOKEN_URL)
-    
+
     authorization_url = client.create_authorization_url(USER_AUTHORIZATION_URL)
-    
+
     webbrowser.open(authorization_url)
 
     code = input('Enter in code: ')
-    
+
     token = client.fetch_access_token(ACCESS_TOKEN_URL, code)
 
     config['token'] = {
@@ -53,16 +53,16 @@ if 'token' not in config:
     }
 
     os.chmod(CONF, 0o400)
-    with open(CONF, 'w') as configfile:
+    with open(CONF, 'w', encoding='utf-8') as configfile:
         config.write(configfile)
 
-kwargs['token'] = config['token']['token']
-kwargs['token_secret'] = config['token']['token_secret']
+authargs['token'] = config['token']['token']
+authargs['token_secret'] = config['token']['token_secret']
 
 session = requests.Session()
 session.keep_alive = 5
 
-auth = OAuth1Auth(**kwargs)
+auth = OAuth1Auth(**authargs)
 
 def fetch(uri, *args, headers=None, **kwargs):
     headers = headers or {}
@@ -71,18 +71,16 @@ def fetch(uri, *args, headers=None, **kwargs):
     headers['user-agent'] = 'smdupes (https://github.com/jimdigriz/smdupes)'
     return session.get(ORIGIN + uri, *args, auth=auth, headers=headers, **kwargs)
 
-res = fetch('/api/v2!authuser')
-
-try:
-    os.unlink(DB)
-except FileNotFoundError:
-    pass
-
-with sqlite3.connect(DB) as con:
-     con.execute('CREATE TABLE album(uri PRIMARY KEY, json, weburi UNIQUE, name)')
-     con.execute('CREATE TABLE image(uri PRIMARY KEY, album REFERENCES album(uri), json, filename, created DATETIME, md5)')
-     con.execute('CREATE INDEX image_created ON image(created)')
-     con.execute('CREATE INDEX image_md5 ON image(md5)')
+def db():
+    try:
+        os.unlink(DB)
+    except FileNotFoundError:
+        pass
+    with sqlite3.connect(DB) as con:
+        con.execute('CREATE TABLE album(uri PRIMARY KEY, json, weburi UNIQUE, name)')
+        con.execute('CREATE TABLE image(uri PRIMARY KEY, album REFERENCES album(uri), json, filename, created DATETIME, md5)')
+        con.execute('CREATE INDEX image_created ON image(created)')
+        con.execute('CREATE INDEX image_md5 ON image(md5)')
 
 def process_album(album):
     con = sqlite3.connect(DB)
@@ -99,7 +97,7 @@ def process_album(album):
     while next_page:
         print(f'processing album images {next_page}')
         res = fetch(next_page)
-        resJ = res.json()
+        res_json = res.json()
         cur.executemany('INSERT INTO image VALUES (?, ?, ?, ?, ?, ?)', (
             (
                 image['Uri'],
@@ -108,19 +106,24 @@ def process_album(album):
                 image['FileName'],
                 datetime.fromisoformat(min(image.get('DateTimeOriginal', datetime.max.isoformat()), image['DateTimeUploaded'])),
                 image['ArchivedMD5']
-            ) for image in resJ['Response']['AlbumImage'] ))
+            ) for image in res_json['Response']['AlbumImage'] ))
         con.commit()
-        next_page = resJ['Response']['Pages'].get('NextPage')
+        next_page = res_json['Response']['Pages'].get('NextPage')
 
-with ThreadPoolExecutor(max_workers=10) as executor:
-    futures = []
-    next_page = res.json()['Response']['User']['Uris']['UserAlbums']['Uri']
-    while next_page:
-        print(f'processing albums {next_page}')
-        res = fetch(next_page)
-        resJ = res.json()
-        for album in resJ['Response']['Album']:
-            futures.append(executor.submit(process_album, album))
-        next_page = resJ['Response']['Pages'].get('NextPage')
-    for future in futures:
-        future.result()
+def main():
+    res = fetch('/api/v2!authuser')
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = []
+        next_page = res.json()['Response']['User']['Uris']['UserAlbums']['Uri']
+        while next_page:
+            print(f'processing albums {next_page}')
+            res = fetch(next_page)
+            res_json = res.json()
+            for album in res_json['Response']['Album']:
+                futures.append(executor.submit(process_album, album))
+            next_page = res_json['Response']['Pages'].get('NextPage')
+        for future in futures:
+            future.result()
+
+db()
+main()
