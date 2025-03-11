@@ -21,7 +21,6 @@ USER_AUTHORIZATION_URL = f'{AUTH_BASE}/authorize'
 ACCESS_TOKEN_URL = f'{AUTH_BASE}/getAccessToken'
 
 config = ConfigParser()
-
 try:
     config.read(CONF)
 except FileNotFoundError:
@@ -33,7 +32,6 @@ authargs = {
     'client_secret': config['client']['client_secret'],
     'redirect_uri': 'oob'
 }
-
 if 'token' not in config:
     client = OAuth1Session(**authargs)
 
@@ -59,11 +57,10 @@ if 'token' not in config:
 authargs['token'] = config['token']['token']
 authargs['token_secret'] = config['token']['token_secret']
 
-session = requests.Session()
-session.keep_alive = 5
-
 auth = OAuth1Auth(**authargs)
 
+session = requests.Session()
+session.keep_alive = 5
 def fetch(uri, *args, headers=None, **kwargs):
     headers = headers or {}
     headers['accept'] = 'application/json'
